@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Scanlyst"
-    database_url: str = "postgresql+asyncpg://aetherscan:aetherscan@localhost:5432/aetherscan"
+    database_url: str = "postgresql+asyncpg://Scanlyst:Scanlyst@localhost:5432/Scanlyst"
     redis_url: str = "redis://localhost:6379/0"
     user_agent: str = "Scanlyst/1.0 (+https://scanlyst.example)"
     scanner_timeout_seconds: float = 120.0
@@ -36,10 +36,13 @@ class Settings(BaseSettings):
     dodo_payments_api_url: str = ""
     dodo_product_starter_monthly: str = ""
     dodo_product_starter_annual: str = ""
+    dodo_product_starter_quarterly: str = ""
     dodo_product_pro_monthly: str = ""
     dodo_product_pro_annual: str = ""
+    dodo_product_pro_quarterly: str = ""
     dodo_product_max_monthly: str = ""
     dodo_product_max_annual: str = ""
+    dodo_product_max_quarterly: str = ""
     dodo_payments_success_url: str = "http://localhost:7000/billing/success"
     dodo_payments_cancel_url: str = "http://localhost:7000/billing/cancel"
     dodo_payments_portal_return_url: str = "http://localhost:7000/dashboard"

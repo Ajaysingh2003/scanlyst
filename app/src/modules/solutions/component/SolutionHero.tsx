@@ -58,7 +58,7 @@ export default function SolutionHero({ solution }: SolutionHeroProps) {
         <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
           <span>CATEGORY: {solution.id.toUpperCase()}</span>
           <span className="text-stone-300">•</span>
-          <span className="text-slate-600 font-medium">AETHERSCAN ENGINE</span>
+          <span className="text-slate-600 font-medium">Scanlyst ENGINE</span>
         </div>
       </div>
 

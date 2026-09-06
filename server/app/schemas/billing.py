@@ -26,7 +26,7 @@ class BillingAccountRead(BaseModel):
 
 class CheckoutRequest(BaseModel):
     plan: Literal["starter", "pro", "max"]
-    interval: Literal["monthly", "annual"] = "monthly"
+    interval: Literal["monthly", "quarterly", "annual"] = "monthly"
 
 
 class CheckoutResponse(BaseModel):

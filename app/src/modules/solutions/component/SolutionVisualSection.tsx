@@ -36,7 +36,7 @@ export default function SolutionVisualSection({ solution }: SolutionVisualSectio
             <span className="size-2.5 rounded-full bg-stone-300" />
             <span className="size-2.5 rounded-full bg-stone-300" />
             <span className="size-2.5 rounded-full bg-stone-300" />
-            <span className="ml-2 font-semibold text-slate-700">aetherscan-telemetry://{solution.slug}.audit</span>
+            <span className="ml-2 font-semibold text-slate-700">Scanlyst-telemetry://{solution.slug}.audit</span>
           </div>
 
           <div className="flex items-center gap-2 text-[11px]">

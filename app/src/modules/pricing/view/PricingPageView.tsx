@@ -169,7 +169,7 @@ function Estimator() {
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-20 -right-20 size-56 rounded-full bg-rose-500/25 blur-3xl"
+            className="pointer-events-none absolute -top-20 -right-20 size-56 rounded-full bg-rose-400/25 blur-3xl"
           />
           <p className="font-mono text-[10.5px] tracking-widest text-white/50 uppercase">
             Your fit
@@ -270,31 +270,6 @@ export default function PricingPageView() {
               </li>
             ))}
           </ul>
-        </div>
-
-        {/* ================= 01 PLANS ================= */}
-        <div className="mt-14 md:mt-20" data-reveal>
-          <div className="mb-8 text-center">
-            <Eyebrow index="01" label="Plans" />
-          </div>
-          <PricingTable />
-          <p className="mt-6 text-center font-mono text-[11px] leading-relaxed text-stone-400">
-            Prices in USD, exclusive of VAT. Quarterly is 3 months at 10% off —
-            annual is 12 months at 20% off, both billed upfront.
-          </p>
-          <figure className="mt-10 overflow-hidden rounded-2xl border border-stone-200 bg-white p-2 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.32)] sm:p-3">
-            <Image
-              src="/scanlyst-pricing-preview.webp"
-              alt="Scanlyst monthly, quarterly, and annual pricing plan comparison"
-              width={1569}
-              height={900}
-              sizes="(max-width: 768px) 100vw, 1152px"
-              className="h-auto w-full rounded-xl"
-            />
-            <figcaption className="px-3 py-3 text-center text-xs text-slate-500">
-              Compare plans and billing periods before opening checkout.
-            </figcaption>
-          </figure>
         </div>
 
         {/* ================= 02 FIND YOUR FIT ================= */}

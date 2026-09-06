@@ -125,7 +125,7 @@ function PlanCardHeader({
 
   const timelineCount: Record<BillingCycleType, number> = {
     monthly: 1,
-    quarterly: 3,
+    quarterly: 6,
     annually: 12,
   };
 
@@ -194,6 +194,7 @@ function PlanCardHeader({
           if (currentAmount > 0) {
             mutate.mutateAsync({
               price_id: plan.billing_cycles[timeLine].price_id,
+              interval: timeLine,
             });
           }
         }}

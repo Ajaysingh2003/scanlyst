@@ -87,7 +87,7 @@ export default function CheckoutResult({ outcome }: CheckoutResultProps) {
               Refresh status
             </Button>
           ) : (
-            <Link href="/pricing" className={buttonVariants({ variant: "outline" })}>
+            <Link  style={{border:"0.1px solid black",boxShadow:"0 2px 4px rgba(0,0,0,0.1)"}}  href="/pricing" className={buttonVariants({ variant: "outline" })}>
               Return to pricing
             </Link>
           )}

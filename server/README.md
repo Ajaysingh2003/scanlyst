@@ -84,7 +84,7 @@ Settings are loaded from environment variables and `.env` through
 
 ```env
 APP_NAME=Scanlyst
-DATABASE_URL=postgresql+asyncpg://aetherscan:aetherscan@db:5432/aetherscan
+DATABASE_URL=postgresql+asyncpg://Scanlyst:Scanlyst@db:5432/Scanlyst
 REDIS_URL=redis://redis:6379/0
 AUTH_JWT_SECRET=replace-with-32-plus-random-characters
 AUTH_ACCESS_TOKEN_MINUTES=15
@@ -131,10 +131,13 @@ DODO_PAYMENTS_WEBHOOK_SECRET=
 DODO_PAYMENTS_ENVIRONMENT=test_mode
 DODO_PAYMENTS_API_URL=
 DODO_PRODUCT_STARTER_MONTHLY=
+DODO_PRODUCT_STARTER_QUARTERLY=
 DODO_PRODUCT_STARTER_ANNUAL=
 DODO_PRODUCT_PRO_MONTHLY=
+DODO_PRODUCT_PRO_QUARTERLY=
 DODO_PRODUCT_PRO_ANNUAL=
 DODO_PRODUCT_MAX_MONTHLY=
+DODO_PRODUCT_MAX_QUARTERLY=
 DODO_PRODUCT_MAX_ANNUAL=
 DODO_PAYMENTS_SUCCESS_URL=http://localhost:7000/billing/success
 DODO_PAYMENTS_CANCEL_URL=http://localhost:7000/billing/cancel

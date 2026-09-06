@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
 import { useTRPC, useTRPCClient } from "@/trpc/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
@@ -16,6 +17,7 @@ export default function BillingView() {
   const { project, isLoading: isProjectLoading } = useActiveProject();
   const trpc = useTRPC();
   const client = useTRPCClient();
+  const [selectedInterval, setSelectedInterval] = useState<"monthly" | "quarterly" | "annual">("monthly");
 
   const { data: account, isLoading: isAccountLoading } = useSuspenseQuery(
     trpc.billing.getAccount.queryOptions()
@@ -26,7 +28,7 @@ export default function BillingView() {
   );
 
   const checkoutMutation = useMutation({
-    mutationFn: (variables: { plan: Exclude<PlanTier, "free">; interval: "monthly" | "annual" }) =>
+    mutationFn: (variables: { plan: Exclude<PlanTier, "free">; interval: "monthly" | "quarterly" | "annual" }) =>
       client.billing.createCheckout.mutate(variables),
     onSuccess: (data) => {
       if (data.checkout_url) window.location.href = data.checkout_url;
@@ -62,7 +64,7 @@ export default function BillingView() {
   }
 
   const handleCheckout = (planId: "starter" | "pro" | "max") => {
-    checkoutMutation.mutate({ plan: planId, interval: "monthly" });
+    checkoutMutation.mutate({ plan: planId, interval: selectedInterval });
   };
 
   const currentPlan = account?.plan || "starter";
@@ -109,6 +111,26 @@ export default function BillingView() {
         </div>
       )}
 
+      {/* Billing Cycle Toggle */}
+      <div className="flex w-full justify-center mb-8">
+        <div className="inline-flex shrink-0 items-center rounded-xl border border-stone-200 bg-stone-100/80 p-1 shadow-2xs">
+          {(["monthly", "quarterly", "annual"] as const).map((cycle) => (
+            <button
+              key={cycle}
+              type="button"
+              onClick={() => setSelectedInterval(cycle)}
+              className={`relative shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-semibold capitalize transition-all cursor-pointer ${
+                selectedInterval === cycle
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {cycle === "annual" ? "Annual (Save 20%)" : cycle === "quarterly" ? "Quarterly (Save 10%)" : "Monthly"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {plans?.map((plan) => {
           const isCurrent = currentPlan === plan.id;
@@ -142,6 +164,22 @@ export default function BillingView() {
                     ? "For growing teams & monitoring"
                     : "For agencies & enterprises"}
                 </p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-slate-950 font-heading">
+                    {isFree
+                      ? "$0"
+                      : selectedInterval === "quarterly"
+                      ? `$${plan.id === "starter" ? 102 : plan.id === "pro" ? 210 : 426}`
+                      : selectedInterval === "annual"
+                      ? `$${plan.id === "starter" ? 182 : plan.id === "pro" ? 375 : 758}`
+                      : `$${plan.id === "starter" ? 19 : plan.id === "pro" ? 39 : 79}`}
+                  </span>
+                  {!isFree && (
+                    <span className="text-xs text-slate-500 font-mono">
+                      /{selectedInterval === "annual" ? "yr" : selectedInterval === "quarterly" ? "qtr" : "mo"}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <ul className="space-y-3 mb-8 text-sm flex-grow mt-2">
