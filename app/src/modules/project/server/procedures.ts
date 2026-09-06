@@ -4,7 +4,79 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
-import type { BillingAccount, BillingPlan, CompetitorBenchmark, FindingItem, FindingRetest, FindingRetestResponse, Project, ProjectActivity, ProjectOverview, ProjectSchedule, ProjectWebhook, ProviderConnection, ReportShare, RoiProfile, ScanDetail, ScanDiff, ScanHistoryItem } from "@/modules/project/types";
+import type { BillingAccount, BillingPlan, CompetitorBenchmark, FindingItem, FindingRetest, FindingRetestResponse, Project, ProjectActivity, ProjectOverview, ProjectSchedule, ProjectWebhook, ProviderConnection, ReportShare, RoiProfile, ScanDetail, ScanDiff, ScanHistoryItem, SeoPreviewData } from "@/modules/project/types";
+
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+}
+
+function parseHtmlSeoMetadata(html: string, baseUrl: string): SeoPreviewData {
+  const getMeta = (propOrName: string): string | null => {
+    const reg = new RegExp(`<meta\\s+[^>]*(?:name|property)=["']${propOrName}["'][^>]*content=["']([^"']*)["']`, "i");
+    const m = html.match(reg);
+    if (m) return decodeHtmlEntities(m[1].trim());
+
+    const regReverse = new RegExp(`<meta\\s+[^>]*content=["']([^"']*)["'][^>]*(?:name|property)=["']${propOrName}["']`, "i");
+    const mRev = html.match(regReverse);
+    if (mRev) return decodeHtmlEntities(mRev[1].trim());
+    return null;
+  };
+
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = titleMatch ? decodeHtmlEntities(titleMatch[1].trim()) : null;
+
+  const description = getMeta("description");
+  const ogTitle = getMeta("og:title") || getMeta("twitter:title") || title;
+  const ogDescription = getMeta("og:description") || getMeta("twitter:description") || description;
+  let ogImage = getMeta("og:image") || getMeta("twitter:image");
+
+  if (ogImage && !/^https?:\/\//i.test(ogImage)) {
+    try {
+      ogImage = new URL(ogImage, baseUrl).toString();
+    } catch {}
+  }
+
+  const canonicalMatch =
+    html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']*)["']/i) ||
+    html.match(/<link[^>]*href=["']([^"']*)["'][^>]*rel=["']canonical["']/i);
+  let canonical = canonicalMatch ? canonicalMatch[1].trim() : null;
+  if (canonical && !/^https?:\/\//i.test(canonical)) {
+    try {
+      canonical = new URL(canonical, baseUrl).toString();
+    } catch {}
+  }
+
+  let favicon = null;
+  const iconMatch = html.match(/<link[^>]*rel=["'](?:shortcut icon|icon)["'][^>]*href=["']([^"']*)["']/i);
+  if (iconMatch) {
+    const favHref = iconMatch[1].trim();
+    try {
+      favicon = new URL(favHref, baseUrl).toString();
+    } catch {
+      favicon = favHref;
+    }
+  }
+
+  return {
+    url: baseUrl,
+    title,
+    description,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    canonical,
+    favicon,
+    fetchedAt: new Date().toISOString(),
+  };
+}
 
 
 const projectsApi = () => {
@@ -346,7 +418,7 @@ export const projectRouter = createTRPCRouter({
     } catch (error) { return projectError(error, "Could not load billing plans"); }
   }),
 
-  createCheckout: baseProcedure.input(z.object({ plan: z.enum(["starter", "pro", "max"]), interval: z.enum(["monthly", "annual"]) })).mutation(async ({ input }): Promise<{ checkout_url: string }> => {
+  createCheckout: baseProcedure.input(z.object({ plan: z.enum(["starter", "pro", "max"]), interval: z.enum(["monthly", "quarterly", "annual"]).default("monthly") })).mutation(async ({ input }): Promise<{ checkout_url: string }> => {
     try {
       const response = await axios.post<{ checkout_url: string }>(`${billingApi()}/checkout`, input, { headers: await headers() });
       return response.data;
@@ -403,4 +475,67 @@ export const projectRouter = createTRPCRouter({
       return response.data || [];
     } catch (error) { return projectError(error, "Could not load retest history"); }
   }),
+
+  seoPreview: baseProcedure.input(z.object({
+    project_id: z.string().uuid(),
+    url: z.string().optional(),
+  })).query(async ({ input }): Promise<SeoPreviewData> => {
+    let targetUrl = input.url;
+    if (!targetUrl) {
+      try {
+        const projRes = await axios.get<{ data: Project }>(
+          `${projectsApi()}/${input.project_id}`,
+          { headers: await headers() }
+        );
+        targetUrl = projRes.data?.data?.website_url || (projRes.data as any)?.website_url;
+      } catch {}
+    }
+
+    if (!targetUrl) {
+      return {
+        url: "",
+        title: null,
+        description: null,
+        ogTitle: null,
+        ogDescription: null,
+        ogImage: null,
+        canonical: null,
+        favicon: null,
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+
+    const normalized = targetUrl.startsWith("http") ? targetUrl : `https://${targetUrl}`;
+
+    try {
+      const res = await axios.get(normalized, {
+        timeout: 8000,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        maxRedirects: 5,
+        responseType: "text",
+      });
+
+      const html = typeof res.data === "string" ? res.data : "";
+      return parseHtmlSeoMetadata(html, normalized);
+    } catch {
+      return {
+        url: normalized,
+        title: null,
+        description: null,
+        ogTitle: null,
+        ogDescription: null,
+        ogImage: null,
+        canonical: null,
+        favicon: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=64`,
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+  }),
 });
+

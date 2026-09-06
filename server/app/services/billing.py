@@ -130,7 +130,7 @@ def _product_id(plan: str, interval: str) -> str:
 
 
 async def create_checkout_session(session: AsyncSession, user: User, plan: str, interval: str) -> str:
-    if plan not in {"starter", "pro", "max"} or interval not in {"monthly", "annual"}:
+    if plan not in {"starter", "pro", "max"} or interval not in {"monthly", "quarterly", "annual"}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid billing plan or interval")
     account = await billing_account(session, user.id)
     if account and account.dodo_subscription_id and account.status in {"active", "trialing", "past_due", "on_hold"}:
@@ -232,7 +232,7 @@ async def process_webhook(session: AsyncSession, event: dict[str, Any], webhook_
             account.dodo_subscription_id = subscription_id
         product_id = data.get("product_id") or ((data.get("product_cart") or [{}])[0].get("product_id"))
         settings = get_settings()
-        product_map = {getattr(settings, f"dodo_product_{p}_{i}"): p for p in ("starter", "pro", "max") for i in ("monthly", "annual") if getattr(settings, f"dodo_product_{p}_{i}").strip()}
+        product_map = {getattr(settings, f"dodo_product_{p}_{i}"): p for p in ("starter", "pro", "max") for i in ("monthly", "quarterly", "annual") if getattr(settings, f"dodo_product_{p}_{i}").strip()}
         active = event_type in {"subscription.active", "subscription.renewed", "subscription.updated", "subscription.plan_changed"} or data.get("status") in {"active", "trialing"}
         ended = event_type in {"subscription.cancelled", "subscription.expired", "subscription.failed"} or data.get("status") in {"cancelled", "expired", "failed", "on_hold"}
         if active and product_map.get(product_id):

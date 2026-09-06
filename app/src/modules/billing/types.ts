@@ -1,5 +1,5 @@
 export type PlanTier = "free" | "starter" | "pro" | "max";
-export type BillingInterval = "monthly" | "annual";
+export type BillingInterval = "monthly" | "quarterly" | "annual";
 export type BillingCycleType = "monthly" | "quarterly" | "annually";
 export type PlanTierType = "free" | "starter" | "pro" | "business";
 

@@ -90,9 +90,25 @@ const checkoutProcedure = getUserProcedure
   .mutation(async ({ input }): Promise<CheckoutResponse> => {
     try {
       const headers = await authHeaders();
-      // Resolve plan if not explicitly passed
-      const plan = input.plan || (input.price_id?.includes("pro") ? "pro" : input.price_id?.includes("max") ? "max" : "starter");
-      const interval = input.interval === "annually" ? "annual" : input.interval === "quarterly" ? "monthly" : input.interval;
+      // Resolve plan and interval
+      let interval: "monthly" | "quarterly" | "annual" =
+        input.interval === "annually" ? "annual" : input.interval;
+      if (input.price_id) {
+        if (input.price_id.includes("quarterly")) {
+          interval = "quarterly";
+        } else if (input.price_id.includes("annual")) {
+          interval = "annual";
+        } else if (input.price_id.includes("monthly")) {
+          interval = "monthly";
+        }
+      }
+      const plan =
+        input.plan ||
+        (input.price_id?.includes("pro")
+          ? "pro"
+          : input.price_id?.includes("max")
+          ? "max"
+          : "starter");
       const response = await axios.post<{ checkout_url: string }>(
         `${billingApi()}/checkout`,
         { plan, interval },

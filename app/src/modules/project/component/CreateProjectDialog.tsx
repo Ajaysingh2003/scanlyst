@@ -135,7 +135,7 @@ export function CreateProjectDialog({
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <DialogFooter className="gap-2 flex space-x-2 sm:gap-0 pt-2">
             <Button
               type="button"
               variant="outline"

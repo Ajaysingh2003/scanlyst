@@ -135,11 +135,11 @@ function PlanCardHeader({
 
 
 
-  const timelineCount={
-    "monthly":1,
-    "quarterly":6,
-    "annually":12
-  }
+  const timelineCount: Record<BillingCycleType, number> = {
+    monthly: 1,
+    quarterly: 6,
+    annually: 12,
+  };
   return (
     <div
       className={cn(
@@ -149,7 +149,7 @@ function PlanCardHeader({
     >
       <h3
         className={cn(
-          "text-lg md:text-xl text-accent   font-headingz font-semibold",
+          "text-lg md:text-xl text-accent font-heading font-semibold",
           popular && "text-white",
         )}
       >
@@ -173,7 +173,7 @@ function PlanCardHeader({
                 popular && "text-white/80",
               )}
             >
-              ${plan?.billing_cycles?.["monthly"]?.amount*timelineCount[timeLine]}
+              ${plan?.billing_cycles?.["monthly"]?.amount * timelineCount[timeLine]}
             </span>
           )}
         <span className={cn(popular && "text-white")}>
@@ -188,6 +188,7 @@ function PlanCardHeader({
             if (plan.billing_cycles[timeLine].amount > 0) {
               mutate.mutateAsync({
                 price_id: plan.billing_cycles[timeLine].price_id,
+                interval: timeLine,
               });
             }
           }}

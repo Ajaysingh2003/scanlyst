@@ -96,7 +96,7 @@ export default function SolutionsIndexView() {
           <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
             <span>SUITE: 4 SPECIALIZED PILLARS</span>
             <span className="text-stone-300">•</span>
-            <span className="text-slate-600 font-medium">AETHERSCAN PLATFORM</span>
+            <span className="text-slate-600 font-medium">Scanlyst PLATFORM</span>
           </div>
         </div>
 

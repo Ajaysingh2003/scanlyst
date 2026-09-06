@@ -247,3 +247,16 @@ export type BillingAccount = {
   usage_scans: number;
   usage_limit: number | null;
 };
+
+export type SeoPreviewData = {
+  url: string;
+  title: string | null;
+  description: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  canonical: string | null;
+  favicon: string | null;
+  fetchedAt: string;
+};
+

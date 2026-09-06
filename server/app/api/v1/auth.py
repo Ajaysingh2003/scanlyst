@@ -4,7 +4,7 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-
+from app.core import send_otp
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
@@ -99,7 +99,8 @@ async def register(payload: RegisterRequest, session: AsyncSession = Depends(get
     await session.commit()
     if verification:
         try:
-            await _send_verification(email, verification)
+            # await _send_verification(email, verification)
+            send_otp(email, verification)
         except Exception:
             logger.exception("email_verification_delivery_failed")
     return RegisterResponse(user=_user(user), verification_required=verification_required)
@@ -131,7 +132,7 @@ async def resend_verification(payload: EmailRequest, session: AsyncSession = Dep
                                            expires_at=datetime.now(timezone.utc) + timedelta(hours=get_settings().auth_email_verification_hours)))
         await session.commit()
         try:
-            await _send_verification(user.email, verification)
+            await send_otp(user.email, verification)
         except Exception:
             logger.exception("email_verification_delivery_failed")
     return {"detail": "If the account exists and is unverified, a verification email has been sent"}

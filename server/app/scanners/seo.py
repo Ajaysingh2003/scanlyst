@@ -84,10 +84,33 @@ class SeoScanner(BaseScanner):
             findings.append(_finding(Severity.medium, "Canonical URL points to another host", "The canonical tag selects a different hostname than the scanned page.",
                                      {"canonical": canonical_url, "host": parsed_target.netloc}, "Confirm the cross-domain canonical is intentional and correct."))
 
-        for property_name in ("og:title", "og:description", "og:image"):
-            if not soup.find("meta", attrs={"property": property_name}):
+        for property_name in ("og:title", "og:description"):
+            if not soup.find("meta", attrs={"property": property_name}) and not soup.find("meta", attrs={"name": property_name}):
                 findings.append(_finding(Severity.low, f"Missing {property_name}", "Social previews and some answer-engine link previews may lack this field.",
                                          {"property": property_name}, f"Add a meaningful {property_name} Open Graph tag."))
+
+        og_image_tag = soup.find("meta", attrs={"property": "og:image"}) or soup.find("meta", attrs={"name": "og:image"})
+        if not og_image_tag or not (og_image_tag.get("content") or "").strip():
+            findings.append(_finding(Severity.low, "Missing og:image", "Social previews and some answer-engine link previews may lack this field.",
+                                     {"property": "og:image"}, "Add a meaningful og:image Open Graph tag."))
+        else:
+            og_img_url = urljoin(target, og_image_tag.get("content", "").strip())
+            if not og_img_url.startswith(("http://", "https://")):
+                findings.append(_finding(Severity.low, "Invalid og:image URL", "The og:image tag does not contain a valid absolute HTTP/HTTPS URL.",
+                                         {"og:image": og_img_url}, "Ensure og:image is a fully-qualified HTTPS image URL."))
+            else:
+                try:
+                    img_resp = await context.http.get(og_img_url)
+                    if img_resp.status_code in (401, 403, 404, 500, 502, 503):
+                        findings.append(_finding(
+                            Severity.medium,
+                            "og:image is inaccessible or blocked",
+                            f"The declared og:image returned HTTP {img_resp.status_code}. Social media platforms (Twitter, LinkedIn) and crawlers cannot fetch this preview image.",
+                            {"og:image": og_img_url, "status_code": img_resp.status_code},
+                            "Host your OpenGraph preview image on a publicly accessible CDN without basic authentication or bot challenge blocks."
+                        ))
+                except Exception:
+                    pass
 
         headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
         h1s = soup.find_all("h1")

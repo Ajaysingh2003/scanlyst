@@ -429,29 +429,31 @@ function DashboardView() {
             {Boolean(
               overview.failed_scanners && overview.failed_scanners > 0,
             ) && (
-              <div className="mt-3.5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 text-amber-900 shadow-2xs">
-                <TriangleAlert className="mt-0.5 size-4.5 shrink-0 text-amber-600" />
-                <div className="min-w-0 flex-1 text-xs">
-                  <p className="font-semibold text-amber-950">
-                    ⚠️ Incomplete Audit: {overview.failed_scanners} scanner
-                    {overview.failed_scanners === 1 ? "" : "s"} could not
-                    connect to this target
-                  </p>
-                  <p className="mt-1 text-amber-800 leading-relaxed font-content">
-                    {overview.global_score != null && (
-                      <span>
-                        Findings-only score is{" "}
-                        <strong>{Math.round(overview.global_score)}/100</strong>
-                        , but overall score is capped at{" "}
-                        <strong>{overview.score}/100</strong> due to low audit
-                        coverage.{" "}
-                      </span>
-                    )}
-                    The target website may have timed out, blocked automated
-                    scanners, or had DNS restrictions.
-                  </p>
-                </div>
-              </div>
+              <div className="mt-3.5 rounded-xl border border-amber-200/90 bg-amber-50/60 p-3.5 text-xs">
+  <div className="flex items-start gap-2.5">
+    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+
+    <div className="min-w-0 flex-1 space-y-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="font-semibold text-amber-950">
+          Partial audit coverage
+        </p>
+        <span className="font-mono text-[10.5px] text-amber-800/80">
+          ({overview.failed_scanners} failed)
+        </span>
+      </div>
+
+      <p className="leading-relaxed text-amber-900/85">
+        {overview.global_score != null && (
+          <span className="font-medium text-amber-950">
+            Findings score: {Math.round(overview.global_score)}/100 · Overall capped at {overview.score}/100.{" "}
+          </span>
+        )}
+        Target host dropped connections, triggered rate limits, or failed DNS lookups during the run.
+      </p>
+    </div>
+  </div>
+</div>
             )}
           </div>
           {/* <div className="rounded-2xl bg-slate-50 px-5 py-4 text-center">

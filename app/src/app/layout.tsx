@@ -4,7 +4,7 @@ import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
 import { Toaster } from "react-hot-toast";
 import { absoluteUrl, siteConfig } from "@/lib/site-config";
-
+import { Analytics } from "@vercel/analytics/next"
 const fontHeading = Marcellus({
   variable: "--font-heading",
   subsets: ["latin"],
@@ -115,6 +115,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
         <TRPCReactProvider>
+          <Analytics/>
         {children}
         <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
         </TRPCReactProvider>

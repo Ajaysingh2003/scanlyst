@@ -10,7 +10,7 @@ from app.models import Base
 # lru_cache issues and works in both local Docker and remote cloud deployments.
 _DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://aetherscan:aetherscan@db:5432/aetherscan",
+    "postgresql+asyncpg://Scanlyst:Scanlyst@db:5432/Scanlyst",
 )
 
 config = context.config

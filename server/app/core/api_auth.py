@@ -9,7 +9,7 @@ from app.core.auth import decode_access_token, token_hash
 from app.core.config import Settings, get_settings
 from app.core.database import SessionFactory
 from app.models import ApiKey, User
-
+from app.core import send_otp
 
 def configured_api_keys(settings: Settings) -> tuple[str, ...]:
     return tuple(key.strip() for key in settings.api_keys.split(",") if key.strip())

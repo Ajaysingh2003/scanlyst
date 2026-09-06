@@ -21,7 +21,8 @@ export default function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <div className="flex h-full w-full items-center justify-center p-4 sm:p-6">
+    <div className="flex items-center justify-center h-full w-full min-h-screen -mt-20">
+      <div className="flex h-full w-full items-center justify-center p-4 sm:p-6">
       <section className="relative mx-auto w-full max-w-xl overflow-hidden rounded-3xl border border-rose-100/70 bg-gradient-to-b from-white via-rose-50/20 to-white/90 p-8 text-center shadow-xs backdrop-blur-xs sm:p-12">
         {/* Ambient Top Glow */}
         <div
@@ -68,6 +69,7 @@ export default function EmptyState({
           </div>
         )}
       </section>
+    </div>
     </div>
   );
 }

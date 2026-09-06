@@ -164,7 +164,7 @@ function PlanCardHeader({
                 popular && "text-white/80",
               )}
             >
-              ${plan?.billing_cycles?.["monthly"]?.amount}
+              ${plan?.billing_cycles?.["monthly"]?.amount * (timeLine === "annually" ? 12 : timeLine === "quarterly" ? 6 : 1)}
             </span>
           )}
         <span className={cn(popular && "text-white")}>
@@ -179,6 +179,7 @@ function PlanCardHeader({
             if (plan.billing_cycles[timeLine].amount > 0) {
               mutate.mutateAsync({
                 price_id: plan.billing_cycles[timeLine].price_id,
+                interval: timeLine,
               });
             }
           }}
