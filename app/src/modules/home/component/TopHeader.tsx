@@ -7,7 +7,7 @@ function TopHeader() {
       <div className="mx-auto max-w-[90%] md:max-w-3xl cursor-pointer flex flex-col gap-5 items-center justify-center">
         <h1
           style={{ fontWeight: "300" }}
-          className="hero-reveal max-w-[min(92vw,738px)] text-balance font-heading text-[clamp(40px,7vw,64px)] font-mediuma leading-[1.15] tracking-[-0.04em] text-ink text-center "
+          className="hero-reveal max-w-[min(92vw,738px)] text-balance font-heading text-[clamp(40px,7vw,54px)] font-mediuma leading-[1.15] tracking-[-0.04em] text-ink text-center "
         >
           Security Insights You Can{" "}
 

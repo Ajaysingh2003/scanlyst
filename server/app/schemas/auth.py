@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=12, max_length=256)
+    password: str = Field(min_length=8, max_length=256)
     display_name: str | None = Field(default=None, max_length=160)
 
 
@@ -20,7 +20,13 @@ class RefreshRequest(BaseModel):
 
 
 class VerifyEmailRequest(BaseModel):
-    token: str
+    email: EmailStr
+    token: str = Field(default="", max_length=256)
+    otp: str | None = Field(default=None, max_length=256)
+
+    @property
+    def verification_code(self) -> str:
+        return (self.otp or self.token).strip()
 
 
 class EmailRequest(BaseModel):

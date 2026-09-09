@@ -22,7 +22,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={(event) => { event.preventDefault(); reset.mutate({ token, password }); }} className="w-full max-w-sm space-y-4">
       <label htmlFor="new-password" className="block text-sm font-medium text-slate-700">New password</label>
-      <Input id="new-password" type="password" minLength={12} required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 12 characters" />
+      <Input id="new-password" type="password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" />
       <Button type="submit" disabled={reset.isPending || !token} className="w-full rounded-md bg-slate-950 hover:bg-slate-800">{reset.isPending ? "Updating…" : "Update password"}</Button>
     </form>
   );
