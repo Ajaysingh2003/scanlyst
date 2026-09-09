@@ -17,7 +17,6 @@ function HomeView() {
       <TopHeader/>
       <CtaSection/>
       <IntroVideo/>
-      {/* <ProductScreenshots/> */}
       <FeatureSection/>
       <HowItWorks/>
       <TrustCredibility/>

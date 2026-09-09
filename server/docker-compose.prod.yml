@@ -1,0 +1,31 @@
+# Production Docker Compose overrides for Scanlyst
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  api:
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers --forwarded-allow-ips="*"
+    # Port 8000 is internal only; all public traffic goes through Nginx
+    ports: []
+    # In production, use the baked application code from Dockerfile (no host bind-mount)
+    volumes: []
+
+  worker:
+    restart: always
+    volumes: []
+
+  migrator:
+    restart: "no"
+    volumes: []
+
+  db:
+    restart: always
+    # Isolate PostgreSQL from public host interface in production
+    ports: []
+
+  redis:
+    restart: always
+
+  nginx:
+    restart: always

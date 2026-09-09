@@ -4,15 +4,17 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from app.core import send_otp
+from app.core.send_otp import send_otp
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import (create_access_token, hash_password, oauth_authorization_url, oauth_state,
                            random_token, token_hash, verify_oauth_state, verify_password)
+from app.core.totp import generate_totp, verify_totp
+from app.core.redis_otp import generate_otp, set_otp, verify_otp as verify_redis_otp
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.api_auth import require_user
@@ -81,60 +83,159 @@ async def _send_password_reset(email: str, token: str) -> None:
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: RegisterRequest, session: AsyncSession = Depends(get_session)):
-    email = str(payload.email).lower()
-    existing = await session.scalar(select(User).where(User.email == email))
+async def register(payload: RegisterRequest, request: Request, session: AsyncSession = Depends(get_session)):
+    email = str(payload.email).lower().strip()
+    existing = await session.scalar(select(User).where(func.lower(User.email) == email))
     if existing:
-        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
-    verification_required = get_settings().auth_email_verification_required
-    user = User(email=email, display_name=payload.display_name, password_hash=hash_password(payload.password),
-                email_verified_at=None if verification_required else datetime.now(timezone.utc))
-    session.add(user)
-    await session.flush()
-    verification = None
+        if existing.email_verified_at:
+            raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+        existing.password_hash = hash_password(payload.password)
+        if payload.display_name:
+            existing.display_name = payload.display_name
+        user = existing
+    else:
+        verification_required = get_settings().auth_email_verification_required
+        user = User(
+            email=email,
+            display_name=payload.display_name,
+            password_hash=hash_password(payload.password),
+            email_verified_at=None if verification_required else datetime.now(timezone.utc),
+        )
+        session.add(user)
+        await session.flush()
+
+    verification_required = get_settings().auth_email_verification_required and not user.email_verified_at
     if verification_required:
-        verification = random_token()
-        session.add(EmailVerificationToken(user_id=user.id, token_hash=token_hash(verification),
-                                           expires_at=datetime.now(timezone.utc) + timedelta(hours=get_settings().auth_email_verification_hours)))
-    await session.commit()
-    if verification:
+        otp_code = generate_otp(6)
+
+        # 1. Primary: Store OTP in Redis (Key: 'otp:{email}', TTL: 15 minutes)
+        await set_otp(email, otp_code, request=request, ttl_seconds=900)
+
+        # 2. Backup: Store in Database with 60-minute validity
         try:
-            # await _send_verification(email, verification)
-            send_otp(email, verification)
+            await session.execute(delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user.id))
+            session.add(EmailVerificationToken(
+                user_id=user.id,
+                token_hash=token_hash(f"{user.id}:{otp_code}"),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=60),
+            ))
+            await session.commit()
+            await session.refresh(user)
+        except Exception as exc:
+            logger.warning("Could not persist OTP backup token in DB: %s", exc)
+
+        print(f">>> [AUTH REGISTRATION OTP] Email: {email} | OTP: {otp_code} <<<")
+        logger.info("Registration OTP generated for %s: %s", email, otp_code)
+
+        try:
+            await asyncio.to_thread(send_otp, email, otp_code)
         except Exception:
             logger.exception("email_verification_delivery_failed")
+    else:
+        await session.commit()
+        await session.refresh(user)
+
     return RegisterResponse(user=_user(user), verification_required=verification_required)
 
 
 @router.post("/verify-email", response_model=AuthUserRead)
-async def verify_email(payload: VerifyEmailRequest, session: AsyncSession = Depends(get_session)):
-    record = await session.scalar(select(EmailVerificationToken).where(
-        EmailVerificationToken.token_hash == token_hash(payload.token), EmailVerificationToken.used_at.is_(None)))
-    if not record or record.expires_at <= datetime.now(timezone.utc):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Verification token is invalid or expired")
-    user = await session.get(User, record.user_id)
+async def verify_email(payload: VerifyEmailRequest, request: Request, session: AsyncSession = Depends(get_session)):
+    raw_email = str(payload.email).lower().strip()
+    user = await session.scalar(select(User).where(func.lower(User.email) == raw_email))
+    if not user and " " in raw_email:
+        user = await session.scalar(select(User).where(func.lower(User.email) == raw_email.replace(" ", "+")))
     if not user:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Verification token is invalid")
-    user.email_verified_at = datetime.now(timezone.utc)
-    record.used_at = datetime.now(timezone.utc)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No account found with this email address")
+    if user.email_verified_at:
+        return _user(user)
+
+    raw_code = payload.verification_code
+    clean_code = "".join(c for c in raw_code if c.isdigit())
+    if not clean_code:
+        clean_code = raw_code.strip()
+
+    print(f">>> [AUTH VERIFY ATTEMPT] Email: {user.email} | Code: '{clean_code}' (raw: '{raw_code}') <<<")
+
+    is_valid = False
+    record = None
+    now = datetime.now(timezone.utc)
+
+    # 1. Primary Check: Verify via Redis
+    if await verify_redis_otp(user.email, clean_code, request=request):
+        is_valid = True
+        print(f">>> [AUTH VERIFY SUCCESS] OTP verified via Redis for {user.email} <<<")
+
+    # 2. Secondary Check: Database token fallback
+    if not is_valid:
+        hashed_scoped = token_hash(f"{user.id}:{clean_code}")
+        hashed_raw = token_hash(clean_code)
+        record = await session.scalar(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.user_id == user.id,
+                EmailVerificationToken.token_hash.in_([hashed_scoped, hashed_raw]),
+                EmailVerificationToken.used_at.is_(None),
+                EmailVerificationToken.expires_at > now,
+            )
+        )
+        if record:
+            is_valid = True
+            print(f">>> [AUTH VERIFY SUCCESS] OTP verified via DB token for {user.email} <<<")
+
+    # 3. Fallback: TOTP calculation
+    if not is_valid:
+        if verify_totp(user.email, clean_code):
+            is_valid = True
+            print(f">>> [AUTH VERIFY SUCCESS] OTP verified via TOTP calculation for {user.email} <<<")
+
+    if not is_valid:
+        print(f">>> [AUTH VERIFY FAILED] Code '{clean_code}' did not match for {user.email} <<<")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Verification code is invalid or expired")
+
+    if record:
+        record.used_at = now
+    user.email_verified_at = now
     await session.commit()
+    await session.refresh(user)
+
+    print(f">>> [AUTH VERIFY COMPLETE] Successfully verified {user.email} <<<")
     return _user(user)
 
 
 @router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
-async def resend_verification(payload: EmailRequest, session: AsyncSession = Depends(get_session)):
+async def resend_verification(payload: EmailRequest, request: Request, session: AsyncSession = Depends(get_session)):
     if not get_settings().auth_email_verification_required:
         return {"detail": "Email verification is disabled in the current environment"}
-    user = await session.scalar(select(User).where(User.email == str(payload.email).lower()))
+    raw_email = str(payload.email).lower().strip()
+    user = await session.scalar(select(User).where(func.lower(User.email) == raw_email))
+    if not user and " " in raw_email:
+        user = await session.scalar(select(User).where(func.lower(User.email) == raw_email.replace(" ", "+")))
+
     if user and not user.email_verified_at:
-        verification = random_token()
-        session.add(EmailVerificationToken(user_id=user.id, token_hash=token_hash(verification),
-                                           expires_at=datetime.now(timezone.utc) + timedelta(hours=get_settings().auth_email_verification_hours)))
-        await session.commit()
+        otp_code = generate_otp(6)
+
+        # 1. Primary: Store in Redis (Key: 'otp:{email}', TTL: 15 minutes)
+        await set_otp(user.email, otp_code, request=request, ttl_seconds=900)
+
+        # 2. Backup: Store in Database
         try:
-            await send_otp(user.email, verification)
+            await session.execute(delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user.id))
+            session.add(EmailVerificationToken(
+                user_id=user.id,
+                token_hash=token_hash(f"{user.id}:{otp_code}"),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=60),
+            ))
+            await session.commit()
+        except Exception as exc:
+            logger.warning("Could not persist OTP backup token in DB on resend: %s", exc)
+
+        print(f">>> [AUTH RESEND OTP] Email: {user.email} | OTP: {otp_code} <<<")
+        logger.info("Resending verification OTP for %s: %s", user.email, otp_code)
+
+        try:
+            await asyncio.to_thread(send_otp, user.email, otp_code)
         except Exception:
             logger.exception("email_verification_delivery_failed")
+
     return {"detail": "If the account exists and is unverified, a verification email has been sent"}
 
 

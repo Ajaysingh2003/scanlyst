@@ -15,7 +15,7 @@ import { useTRPCClient } from "@/trpc/client";
 const registerSchema = z.object({
   display_name: z.string().trim().min(2, "Enter at least 2 characters").max(160),
   email: z.string().email("Enter a valid email address"),
-  password: z.string().min(12, "Use at least 12 characters").max(256),
+  password: z.string().min(8, "Use at least 8 characters").max(256),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -69,7 +69,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="register-password" className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-          <Input id="register-password" type="password" autoComplete="new-password" placeholder="At least 12 characters" {...form.register("password")} />
+          <Input id="register-password" type="password" autoComplete="new-password" placeholder="At least 8 characters" {...form.register("password")} />
           {form.formState.errors.password && (
             <p className="mt-1 text-xs text-red-600">{form.formState.errors.password.message}</p>
           )}

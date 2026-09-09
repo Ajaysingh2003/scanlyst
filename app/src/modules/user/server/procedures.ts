@@ -119,7 +119,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   verifyEmail: baseProcedure
-    .input(z.object({ token: z.string().min(1) }))
+    .input(z.object({ email: z.string().email(), token: z.string().min(1) }))
     .mutation(async ({ input }): Promise<AuthUser> => {
       try {
         const response = await axios.post<AuthUser>(`${authApi()}/verify-email`, input);
