@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     auth_email_verification_required: bool = True
     auth_email_verification_hours: int = 24
     auth_frontend_url: str = "http://localhost:7000"
+    auth_cookie_domain: str = ""
     supabase_encryption_key: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
