@@ -2,6 +2,7 @@ import asyncio
 import logging
 import secrets
 import smtplib
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from app.core.send_otp import send_otp
@@ -431,13 +432,27 @@ async def oauth_callback(provider: str, request: Request, code: str = Query(...)
         session.add(AuthIdentity(user_id=user.id, provider=provider, subject=subject, provider_email=email))
     tokens = await _tokens(user, session)
     await session.commit()
-    response = RedirectResponse(f"{get_settings().auth_frontend_url}/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    settings = get_settings()
+    frontend_url = settings.auth_frontend_url.rstrip("/")
+    response = RedirectResponse(f"{frontend_url}/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+    cookie_domain = settings.auth_cookie_domain.strip() if settings.auth_cookie_domain else None
+    if not cookie_domain and frontend_url.startswith("https://"):
+        parsed = urlparse(frontend_url)
+        if parsed.hostname and "." in parsed.hostname:
+            parts = parsed.hostname.split(".")
+            if len(parts) >= 2 and not parts[-1].isdigit():
+                cookie_domain = f".{'.'.join(parts[-2:])}"
+
     cookie_options = {
         "httponly": True,
-        "secure": get_settings().auth_frontend_url.startswith("https://"),
+        "secure": frontend_url.startswith("https://"),
         "samesite": "lax",
         "path": "/",
     }
+    if cookie_domain:
+        cookie_options["domain"] = cookie_domain
+
     response.set_cookie("access_token", tokens.access_token, max_age=tokens.expires_in, **cookie_options)
-    response.set_cookie("refresh_token", tokens.refresh_token, max_age=get_settings().auth_refresh_token_days * 86400, **cookie_options)
+    response.set_cookie("refresh_token", tokens.refresh_token, max_age=settings.auth_refresh_token_days * 86400, **cookie_options)
     return response

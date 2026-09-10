@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Marcellus, DM_Sans } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
 import { Toaster } from "react-hot-toast";
@@ -113,6 +114,19 @@ export default function RootLayout({
       className={`${fontHeading.variable} ${fontContent.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-F5X80C37X5"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-F5X80C37X5');
+          `}
+        </Script>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
         <TRPCReactProvider>
           <Analytics/>
